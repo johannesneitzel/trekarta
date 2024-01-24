@@ -41,6 +41,11 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.location.LocationProvider;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorEvent;
+import android.hardware.SensorManager;
+import android.hardware.Sensor;
+import android.util.Log;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
@@ -53,7 +58,12 @@ import android.os.SystemClock;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+<<<<<<< Updated upstream
 import androidx.preference.PreferenceManager;
+=======
+import androidx.core.content.ContextCompat;
+
+>>>>>>> Stashed changes
 import android.text.format.DateUtils;
 
 import org.slf4j.Logger;
@@ -78,7 +88,15 @@ import mobi.maptrek.io.Manager;
 import mobi.maptrek.util.ProgressListener;
 import mobi.maptrek.util.StringFormatter;
 
-public class LocationService extends BaseLocationService implements LocationListener, GpsStatus.Listener, OnSharedPreferenceChangeListener {
+import mad.location.manager.lib.Interfaces.LocationServiceInterface;
+import mad.location.manager.lib.Interfaces.LocationServiceStatusInterface;
+import mad.location.manager.lib.Interfaces.ILogger;
+import mad.location.manager.lib.Services.ServicesHelper;
+import mad.location.manager.lib.Services.Settings;
+import mad.location.manager.lib.Commons.Utils;
+import mad.location.manager.lib.Services.KalmanLocationService;
+
+public class LocationService extends BaseLocationService implements LocationServiceInterface, SensorEventListener, LocationListener, GpsStatus.Listener, OnSharedPreferenceChangeListener, ILogger {
     private static final Logger logger = LoggerFactory.getLogger(LocationService.class);
 
     private static final int SKIP_INITIAL_LOCATIONS = 2;
@@ -93,6 +111,11 @@ public class LocationService extends BaseLocationService implements LocationList
     private static final boolean enableMockLocations = false;
     private final Handler mMockCallback = new Handler(Looper.getMainLooper());
     private int mMockLocationTicker = 0;
+
+    //sensors (for kalman filter)
+    private SensorManager mSensorManager = null;
+    private Sensor mAccelerometer = null;
+    private Sensor mGyroscope = null;
 
     // Real locations
     private LocationManager mLocationManager = null;
@@ -180,6 +203,8 @@ public class LocationService extends BaseLocationService implements LocationList
         onSharedPreferenceChanged(sharedPreferences, PREF_TRACKING_MIN_TIME);
         onSharedPreferenceChanged(sharedPreferences, PREF_TRACKING_MIN_DISTANCE);
         sharedPreferences.registerOnSharedPreferenceChangeListener(this);
+
+        ServicesHelper.addLocationServiceInterface(this);
 
         logger.debug("Service started");
     }
@@ -272,12 +297,54 @@ public class LocationService extends BaseLocationService implements LocationList
         }
     }
 
+    @Override
+    public void log2file(String format, Object... args) {
+        //XLog.i(format, args);
+        Log.d("mad-location-service", String.format(format, args));
+    }
+
     public static boolean isGpsProviderEnabled(Context context) {
         LocationManager locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
         if (locationManager != null) {
             return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
         }
         return false;
+    }
+
+    private void connectAndStartKalman()
+    {
+        ServicesHelper.getLocationService(this, value -> {
+            if (value.IsRunning()) {
+                return;
+            }
+            value.stop();
+            Settings settings =
+                    new Settings(
+                            Utils.ACCELEROMETER_DEFAULT_DEVIATION,
+                            10,
+                            2000,
+                            500,
+                            6,
+                            2,
+                            10.0,
+                            this,
+                            true,
+                            false,
+                            true,
+                            Utils.DEFAULT_VEL_FACTOR,
+                            Utils.DEFAULT_POS_FACTOR,
+                            Settings.LocationProvider.FUSED  //Settings.LocationProvider.GPS
+                    );
+            value.reset(settings); //warning!! here you can adjust your filter behavior
+            value.start();
+        });
+    }
+
+    private void stopKalman()
+    {
+        ServicesHelper.getLocationService(this, value -> {
+            value.stop();
+        });
     }
 
     private void connect() {
@@ -294,10 +361,13 @@ public class LocationService extends BaseLocationService implements LocationList
                     mLocationManager.addGpsStatusListener(this);
                 }
                 try {
+                    // TODO: jojo replace with Kalman serivce
                     mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, LOCATION_DELAY, 0, this);
                     //mLocationManager.addNmeaListener(this);
                     mLocationsEnabled = true;
                     logger.debug("Gps provider set");
+
+                    connectAndStartKalman();
                 } catch (IllegalArgumentException e) {
                     logger.warn("Cannot set gps provider, likely no gps on device");
                 }
@@ -309,6 +379,15 @@ public class LocationService extends BaseLocationService implements LocationList
             mMockLocationTicker = 0;
             mMockCallback.post(mSendMockLocation);
             mLocationsEnabled = true;
+        }
+
+        mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        if (mSensorManager != null) {
+            mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+            mGyroscope = mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
+        }
+        else {
+            logger.debug("Sensormanager not available.");
         }
     }
 
@@ -328,6 +407,7 @@ public class LocationService extends BaseLocationService implements LocationList
                 mLocationManager.removeGpsStatusListener(this);
             }
             mLocationManager = null;
+            stopKalman();
         }
         if (enableMockLocations && BuildConfig.DEBUG) {
             mLocationsEnabled = false;
@@ -763,10 +843,28 @@ public class LocationService extends BaseLocationService implements LocationList
 
     @Override
     public void onLocationChanged(@NonNull final Location location) {
+        logger.error("GPS Location update received!");
+    }
+
+    //@Override
+    //public void locationChanged(Location location) {
+    //    if (m_map != null && m_presenter != null) {
+    //        if (!m_map.isMyLocationEnabled()) {
+    //            m_map.setMyLocationEnabled(true);
+    //            m_map.getMyLocationViewSettings().setForegroundTintColor(ContextCompat.getColor(this, R.color.red));
+    //        }
+    //
+    //        m_presenter.locationChanged(location, m_map.getCameraPosition());
+    //    }
+    //}
+
+    @Override
+    public void locationChanged(Location location) {
         if (enableMockLocations && BuildConfig.DEBUG)
             return;
 
         // skip initial locations
+        // TODO: Jojo weird... introduce state instead (and use state design pattern)
         if (mLastLocationMillis < 0) {
             mLastLocationMillis++;
             return;
@@ -780,7 +878,10 @@ public class LocationService extends BaseLocationService implements LocationList
 
         mLastKnownLocation = location;
 
-        if (mLastKnownLocation.getSpeed() == 0 && prevTrack != 0) {
+        // TODO: Jojo What if bearing == 0°??
+        // TODO: Jojo Process hasSpeed()?? Maybe not every GPS HW provides speed info....
+        // TODO: jojo check float against zero?
+        if (location.getSpeed() == 0 && prevTrack != 0) {
             mLastKnownLocation.setBearing(prevTrack);
         }
 
@@ -792,6 +893,7 @@ public class LocationService extends BaseLocationService implements LocationList
         if (mJustStarted) {
             mJustStarted = prevSpeed == 0;
         } else if (mLastKnownLocation.getSpeed() > 0) {
+            // TODO: jojo heuristic to filter GPS spikes - not needed with Kalman filter
             // filter speed outrages
             double a = 2 * 9.8 * (mLastLocationMillis - prevLocationMillis) / 1000;
             if (Math.abs(mLastKnownLocation.getSpeed() - prevSpeed) > a)
@@ -801,6 +903,16 @@ public class LocationService extends BaseLocationService implements LocationList
         updateLocation();
 
         mContinuous = true;
+    }
+
+    public void onSensorChanged(SensorEvent sensorEvent) {
+        String sensorName = sensorEvent.sensor.getName();
+        Log.e("Jojo: ", sensorName + ": X: " + sensorEvent.values[0] + "; Y: " + sensorEvent.values[1] + "; Z: " + sensorEvent.values[2] + ";");
+    }
+
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+        String sensorName = sensor.getName();
+        Log.e("Jojo: ", sensorName + ": Accuracy changed! = " + accuracy);
     }
 
     /*
@@ -1022,6 +1134,14 @@ public class LocationService extends BaseLocationService implements LocationList
         public Location getLocation() {
             return mLastKnownLocation;
         }
+
+        @Override
+        public Location getFilteredLocation() {
+
+            // TODO: Jojo implement!
+            return new Location("kalman");
+        }
+
 
         @Override
         public int getStatus() {

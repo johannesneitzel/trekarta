@@ -1496,6 +1496,7 @@ public class MainActivity extends AppCompatActivity implements ILocationListener
             mapObject.name = getString(R.string.selectedLocation);
             startNavigation(mapObject);
             return true;
+        // TODO: jojo never called
         } else if (action == R.id.actionFindRouteHere) {
             mapViewModel.removeMarker();
             Intent routeIntent = new Intent(Intent.ACTION_PICK, null, this, GraphHopperService.class);
@@ -1951,6 +1952,7 @@ public class MainActivity extends AppCompatActivity implements ILocationListener
             return;
         }
 
+        // TODO: jojo needed for inter service comm
         mIsLocationBound = bindService(new Intent(getApplicationContext(), LocationService.class), mLocationConnection, BIND_AUTO_CREATE);
         mLocationState = LocationState.SEARCHING;
         if (mSavedLocationState == LocationState.DISABLED) {

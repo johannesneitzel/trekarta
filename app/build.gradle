@@ -53,7 +53,10 @@ android {
     }
     buildFeatures {
         aidl true
+<<<<<<< Updated upstream
         buildConfig true
+=======
+>>>>>>> Stashed changes
     }
 }
 
@@ -64,6 +67,7 @@ repositories {
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
+    //implementation fileTree(dir: 'C:\\Users\\jeman\\.gradle\\caches\\modules-2\\files-2.1\\com.github.maddevsio\\mad-location-manager\\0.1.16\\c14f21b93a1a5ca0309cf7422b002e2e3040ab88', include: ['*.aar', '*.jar'], exclude: [])
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
@@ -95,5 +99,9 @@ dependencies {
     implementation 'com.getkeepsafe.taptargetview:taptargetview:1.13.3'
     implementation 'com.github.AppIntro:AppIntro:6.1.0'
     implementation 'de.hdodenhof:circleimageview:3.1.0'
+<<<<<<< Updated upstream
     implementation 'com.github.robinst:autolink-java:autolink-0.10.1'
+=======
+    implementation 'com.github.maddevsio:mad-location-manager:0.1.16'
+>>>>>>> Stashed changes
 }

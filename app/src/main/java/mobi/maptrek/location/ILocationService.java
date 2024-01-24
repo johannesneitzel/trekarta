@@ -31,6 +31,7 @@ public interface ILocationService
 	boolean isLocating();
 	boolean isTracking();
 	Location getLocation();
+	Location getFilteredLocation();
     int getStatus();
 
 	/**

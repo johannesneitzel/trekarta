@@ -185,6 +185,7 @@
             android:foregroundServiceType="location"
             android:exported="false"/>
         <service
+<<<<<<< Updated upstream
             android:name=".location.GraphHopperService"
             android:foregroundServiceType="shortService"
             android:exported="false"/>
@@ -192,6 +193,15 @@
             android:name="androidx.work.impl.foreground.SystemForegroundService"
             android:foregroundServiceType="shortService"
             tools:node="merge" />
+=======
+            android:name=".maps.MapService"
+            android:exported="false" />
+        <service
+            android:name="mad.location.manager.lib.Services.KalmanLocationService"
+            android:enabled="true"
+            android:exported="false"
+            android:stopWithTask="false" />
+>>>>>>> Stashed changes
 
         <!--
         Disable Android Startup (for custom Worker Manager initialization)
