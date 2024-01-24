@@ -58,12 +58,7 @@ import android.os.SystemClock;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-<<<<<<< Updated upstream
 import androidx.preference.PreferenceManager;
-=======
-import androidx.core.content.ContextCompat;
-
->>>>>>> Stashed changes
 import android.text.format.DateUtils;
 
 import org.slf4j.Logger;

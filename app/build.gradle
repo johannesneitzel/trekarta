@@ -53,10 +53,7 @@ android {
     }
     buildFeatures {
         aidl true
-<<<<<<< Updated upstream
         buildConfig true
-=======
->>>>>>> Stashed changes
     }
 }
 
@@ -99,9 +96,6 @@ dependencies {
     implementation 'com.getkeepsafe.taptargetview:taptargetview:1.13.3'
     implementation 'com.github.AppIntro:AppIntro:6.1.0'
     implementation 'de.hdodenhof:circleimageview:3.1.0'
-<<<<<<< Updated upstream
     implementation 'com.github.robinst:autolink-java:autolink-0.10.1'
-=======
     implementation 'com.github.maddevsio:mad-location-manager:0.1.16'
->>>>>>> Stashed changes
 }
